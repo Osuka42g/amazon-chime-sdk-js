@@ -164,11 +164,58 @@ export class DemoMeetingApp implements AudioVideoObserver, DeviceChangeObserver,
     }
   }
 
+
+  startMeeting(): void {
+    this.meeting = (document.getElementById('inputMeeting') as HTMLInputElement).value;
+    this.name = (document.getElementById('inputName') as HTMLInputElement).value;
+    this.region = (document.getElementById('inputRegion') as HTMLInputElement).value;
+    new AsyncScheduler().start(
+      async (): Promise<void> => {
+        let chimeMeetingId: string = '';
+        this.showProgress('progress-authenticate');
+        try {
+          chimeMeetingId = await this.authenticate();
+        } catch (error) {
+          (document.getElementById(
+            'failed-meeting'
+          ) as HTMLDivElement).innerHTML = `Meeting ID: ${this.meeting}`;
+          (document.getElementById('failed-meeting-error') as HTMLDivElement).innerHTML =
+            error.message;
+          this.switchToFlow('flow-failed-meeting');
+          return;
+        }
+        (document.getElementById(
+          'meeting-id'
+        ) as HTMLSpanElement).innerHTML = `${this.meeting} (${this.region})`;
+        (document.getElementById(
+          'chime-meeting-id'
+        ) as HTMLSpanElement).innerHTML = `${chimeMeetingId}`;
+        (document.getElementById('info-meeting') as HTMLSpanElement).innerHTML = this.meeting;
+        (document.getElementById('info-name') as HTMLSpanElement).innerHTML = this.name;
+        this.switchToFlow('flow-devices');
+        await this.openAudioInputFromSelection();
+        try {
+          await this.openVideoInputFromSelection(
+            (document.getElementById('video-input') as HTMLSelectElement).value,
+            true
+          );
+        } catch (err) {
+          this.log('no video input device selected');
+        }
+        await this.openAudioOutputFromSelection();
+        this.hideProgress('progress-authenticate');
+      }
+    );
+  }
+
   initParameters(): void {
     const meeting = new URL(window.location.href).searchParams.get('m');
+    const name = new URL(window.location.href).searchParams.get('n');
     if (meeting) {
       (document.getElementById('inputMeeting') as HTMLInputElement).value = meeting;
       (document.getElementById('inputName') as HTMLInputElement).focus();
+      (document.getElementById('inputName') as HTMLInputElement).value = name || 'Robert Davis';
+      this.startMeeting();
     } else {
       (document.getElementById('inputMeeting') as HTMLInputElement).focus();
     }
@@ -184,43 +231,7 @@ export class DemoMeetingApp implements AudioVideoObserver, DeviceChangeObserver,
       this.meeting = (document.getElementById('inputMeeting') as HTMLInputElement).value;
       this.name = (document.getElementById('inputName') as HTMLInputElement).value;
       this.region = (document.getElementById('inputRegion') as HTMLInputElement).value;
-      new AsyncScheduler().start(
-        async (): Promise<void> => {
-          let chimeMeetingId: string = '';
-          this.showProgress('progress-authenticate');
-          try {
-            chimeMeetingId = await this.authenticate();
-          } catch (error) {
-            (document.getElementById(
-              'failed-meeting'
-            ) as HTMLDivElement).innerHTML = `Meeting ID: ${this.meeting}`;
-            (document.getElementById('failed-meeting-error') as HTMLDivElement).innerHTML =
-              error.message;
-            this.switchToFlow('flow-failed-meeting');
-            return;
-          }
-          (document.getElementById(
-            'meeting-id'
-          ) as HTMLSpanElement).innerHTML = `${this.meeting} (${this.region})`;
-          (document.getElementById(
-            'chime-meeting-id'
-          ) as HTMLSpanElement).innerHTML = `${chimeMeetingId}`;
-          (document.getElementById('info-meeting') as HTMLSpanElement).innerHTML = this.meeting;
-          (document.getElementById('info-name') as HTMLSpanElement).innerHTML = this.name;
-          this.switchToFlow('flow-devices');
-          await this.openAudioInputFromSelection();
-          try {
-            await this.openVideoInputFromSelection(
-              (document.getElementById('video-input') as HTMLSelectElement).value,
-              true
-            );
-          } catch (err) {
-            this.log('no video input device selected');
-          }
-          await this.openAudioOutputFromSelection();
-          this.hideProgress('progress-authenticate');
-        }
-      );
+      this.startMeeting();
     });
 
     document.getElementById('to-sip-flow').addEventListener('click', e => {

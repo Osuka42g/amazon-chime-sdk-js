@@ -78,6 +78,7 @@ const server = require(protocol).createServer(options, async (request, response)
       attendeeCache[title][joinInfo.JoinInfo.Attendee.AttendeeId] = name;
       response.statusCode = 201;
       response.setHeader('Content-Type', 'application/json');
+      response.setHeader('Access-Control-Allow-Origin', '*');
       response.write(JSON.stringify(joinInfo), 'utf8');
       response.end();
       log(JSON.stringify(joinInfo, null, 2));
